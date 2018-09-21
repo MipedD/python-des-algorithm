@@ -30,6 +30,10 @@ def test():
     
     print(right_side)
     
+    shifted_value = des._leftShift(0b1000,4,6)
+    
+    print(shifted_value)
+    
 
 class DES:
     
@@ -57,8 +61,38 @@ class DES:
                             
         return permutated_value
     
-    def _getNthBit(self,value, bit_index):
+    def _getNthBit(self, value, bit_index):
         return ((value & (1 << bit_index)) != 0)
+    
+    def _leftShift(self, value, size_bits, num_shifts):
+        
+        #No reason to shift more than once around 
+        num_shifts = num_shifts % size_bits
+        
+        #The mask to catch the overflowing bits after each shift
+        overflow_mask = 1 << (size_bits - 1)
+        #The mask to catch only the relevant bits (none of the overflow)
+        var_size_mask = 0
+        
+        #Value after the shift
+        shifted_value = value
+        
+        #Create variable size mask
+        for i in range(0, size_bits):
+            var_size_mask = var_size_mask << 1
+            var_size_mask = var_size_mask | 1
+        
+        #Time to get SHIFTYYYYY
+        for i in range(0, num_shifts):
+            #Check overflow
+            overflow = (shifted_value & overflow_mask) >> (size_bits - 1)
+            #Cause the overflow & clean it up
+            shifted_value = (shifted_value << 1) & var_size_mask
+            #Move the overflow to the beginning of the value
+            shifted_value = shifted_value | overflow
+        
+        return shifted_value
+        
         
                                                
         
