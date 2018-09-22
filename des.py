@@ -8,9 +8,9 @@ Created on Fri Sep 21 17:05:32 2018
 def test():
     
     testkey = b'\x13\x34\x57\x79\x9B\xBC\xDF\xF1'
-    testdata = b'\x01\x23\x45\x67\x89\xAB\xCD\xEF'
+    testdata = b'\x0A\x0B\x0C\x0D\x0E\x0F\x0F\x0F'
     
-    des = DES()
+    des = DESCipher()
     
     cipher_text = des.encrypt([testdata], testkey)
     
@@ -21,9 +21,14 @@ def test():
     
 
 
+""" This is a simple implementation of a DES algorithm simply for practice.
+ 
+    The class encapsulates all DES Cipher functionality and offers two easy client side functions (encrypt and decrypt)
+"""
+class DESCipher:
 
-class DES:
-
+    """The constructor. Also intializes all the required tables for cipher functionality
+    """
     def __init__(self):
         
         self._pc_table1 = [57,49,41,33,25,17,9,1,58,50,42,34,26,18,10,2,59,51,43,35,27,19,11,3,60,52,44,36,63,55,47,39,31,23,15,7,62,54,46,38,30,22,14,6,61,53,45,37,29,21,13,5,28,20,12,4]
@@ -80,6 +85,11 @@ class DES:
                                         [2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11]]]
 
     
+    """ Function to perform encryption on a number of 64 bit blocks of data.
+      @param list_of_64bit_blocks a list containing blocks bytes to be encrypted. Each member expected to be 64 bit in length
+      @param the DES key (64 bit). Expected type BYTES
+      @return a cipher text in BYTES format
+    """
     def encrypt(self, list_of_64bit_blocks, key_64bit):
         #Error checking
         if type(key_64bit) !=bytes:
@@ -104,6 +114,11 @@ class DES:
                             
         return bytes(cipher_text_arr)
     
+    """ Function to perform decryption on a number of 64 bit blocks of data.
+      @param list_of_64bit_blocks a list containing blocks bytes to be decrypted. Each member expected to be 64 bit in length
+      @param the DES key (64 bit). Expected type BYTES
+      @return a clear text in BYTES format
+    """
     def decrypt(self, list_of_64bit_ciphertxt_blocks, key_64bit):
         #Error checking
         if type(key_64bit) !=bytes:
@@ -130,9 +145,20 @@ class DES:
                             
         return bytes(clear_text_arr)
     
+    
+    """A private function to be used in decryption of a single block. 
+      @param data_64bit the data to be decrypted
+      @param round_keys_reversed a list of round keys
+      @return decrypted data in form of INT 64 bit
+    """
     def _decryptBlock(self, data_64bit, round_keys_reversed):
         return self._encryptBlock(data_64bit, round_keys_reversed)
     
+    """ A private function to be used in encryption of a single block. 
+     @param data_64bit the data to be encrypted
+     @param round_keys a list of round keys
+     @return encrypted data in form of INT 64 bit
+    """
     def _encryptBlock(self, data_64bit, round_keys):
         data_64bit = self._permute(data_64bit, self._initial_permutation, 64)
                 
@@ -148,6 +174,11 @@ class DES:
                         
         return self._permute((left_side | (right_side << 32)),self._permutation_final, 64)
     
+    """ A private function to perform a single cipher round
+         @param left0_32bit initial left side bits (32) for operation
+         @param right0_32bit initial right side bits (32) for operation
+         @return
+    """ 
     def _cipherRound(self, left0_32bit, right0_32bit, round_key):
         
         left1_32bit = right0_32bit
@@ -156,7 +187,11 @@ class DES:
         
         return left1_32bit, right1_32bit
         
-    
+    """ A private function to perform a cipher function on the right side bits during a round (expansion, xor with key, substitution, permutation)
+        @param data32_bit the right side bits to be operated on
+        @param round_key the round_key of corresponding iteration
+        @return the output of function (32 bit integer)
+    """
     def _cipherFunction(self, data_32bit, round_key):
         #perform expansion permutation (32bit to 48bit)
         data_48bit = self._permute(data_32bit, self._expansion, 32)
@@ -167,6 +202,10 @@ class DES:
         #Permutation
         return self._permute(substitution, self._permutation, 32)
     
+    """ A private function to perform substitute operation within the cipher function.
+        @param xor_value of key and right side bits
+        @return the output of the operation (32bit int)
+    """
     def _substitute(self, xor_value):        
         output_data = 0
                 
@@ -189,7 +228,10 @@ class DES:
             
         return output_data
             
-    
+    """ A private function to build a set of (16) round keys needed during the encryption and decryption operations
+        @param key_64bit the original 64 bit key
+        @return a list of round keys (int 48 bit)
+    """
     def _createRoundkeys(self, key_64bit ):        
         #FIRST PERMUTATION        
         key_64bit = self._permute(key_64bit, self._pc_table1, 64)
@@ -212,7 +254,11 @@ class DES:
                     self._permute(combined_sides, self._pc_table2, 56))
 
         return round_keys
-        
+    
+    """ A private function to simply convert a byte array into an integer
+        @param byte_arr the input array
+        @return an integer representation of byte array
+    """
     def _byteArrayToInt(self, byte_arr):
         value = 0
         
@@ -221,6 +267,10 @@ class DES:
             
         return value
     
+    """ A private function to convert a 64 bit integer into a byte array
+        @param int64_bit the input integer
+        @return a bytes representing the integer
+    """
     def _intIntoByteArray(self, int_64bit):
         byte_arr = list()
         
@@ -232,6 +282,12 @@ class DES:
         byte_arr.reverse()
         return bytes(byte_arr)
     
+    """ A private function to perform a permutation operation typical to DES algorithm on input
+        @param value_n_bits a value of N bits in size
+        @param table the permutation table
+        @param var_size the size of input variable
+        @return permutated value (int). Size corresponding to the length of permutation table
+    """
     def _permute(self, value_n_bits, table, var_size):
         permutated_value = 0
         
@@ -243,12 +299,23 @@ class DES:
             
         return permutated_value
     
+    """ A private function to get the bit value of a N:th bit in a variable
+        @param value the target variable value
+        @bit_index the index of the bit to be retrieved from the value
+        @return 1 or 0 
+    """
     def _getNthBit(self, value, bit_index):
         if ((value & (1 << bit_index)) != 0):
             return 1
         else:
             return 0
             
+    """ A private function to perform left shift operation during round key creation.
+        @param value to be operated on
+        @param size_bits the value size in bits
+        @num_shifts the number of shifts (by 1) to be performed on the value
+        @return the shifted value (int)
+    """
     def _leftShift(self, value, size_bits, num_shifts):
         #No reason to shift more than once around 
         num_shifts = num_shifts % size_bits
