@@ -17,12 +17,20 @@ def test():
     print("Starting a test\n")
     print("Data: " + str(data_int))
     print("Key: " + str(key_int))
+    print("KEYHEX " + str(des._intIntoByteArray(key_int)))
     print("Round keys: ")
     print(des._round_keys)
     print("")
-        
     
-    print(des._encryptBlock(data_int, des._round_keys))
+    cipher_text = des._encryptBlock(data_int, des._round_keys)
+    
+    print(cipher_text)
+    
+    des._round_keys.reverse()
+    
+    clear_text = des._decryptBlock(cipher_text, des._round_keys)
+    
+    print(clear_text)
 
 testkey = b'\x13\x34\x57\x79\x9B\xBC\xDF\xF1'
 testdata = b'\x01\x23\x45\x67\x89\xAB\xCD\xEF'
@@ -32,6 +40,7 @@ testdata = b'\x01\x23\x45\x67\x89\xAB\xCD\xEF'
 class DES:
 
     def __init__(self):
+        
         self._pc_table1 = [57,49,41,33,25,17,9,1,58,50,42,34,26,18,10,2,59,51,43,35,27,19,11,3,60,52,44,36,63,55,47,39,31,23,15,7,62,54,46,38,30,22,14,6,61,53,45,37,29,21,13,5,28,20,12,4]
         self._pc_table2 = [14,17,11,24,1,5,3,28,15,6,21,10,23,19,12,4,26,8,16,7,27,20,13,2,41,52,31,37,47,55,30,40,51,45,33,48,44,49,39,56,34,53,46,42,50,36,29,32]
         self._expansion = [32,1,2,3,4,5,4,5,6,7,8,9,8,9,10,11,12,13,12,13,14,15,16,17,16,17,18,19,20,21,20,21,22,23,24,25,24,25,26,27,28,29,28,29,30,31,32,1]
@@ -90,36 +99,25 @@ class DES:
     
     
     
+    def _decryptBlock(self, data_64bit, round_keys_reversed):
+        return self._encryptBlock(data_64bit, round_keys_reversed)
+    
     def _encryptBlock(self, data_64bit, round_keys):
         data_64bit = self._permute(data_64bit, self._initial_permutation, 64)
-        
-        print("IP: " + str(data_64bit))
-        
+                
         #Split the data
         left_side = (data_64bit & 0xFFFFFFFF00000000) >> 32
         right_side = (data_64bit & 0x00000000FFFFFFFF)
         
         for i in range(0,16):
-            print("Cipher round " + str(i))
             cipher_round_output = self._cipherRound(left_side, right_side, round_keys[i])
             
             left_side = cipher_round_output[0]
             right_side = cipher_round_output[1]
-            
-            print("Left 1 value: " + str(left_side))
-            print("Right 1 value " + str(right_side))
-            
-            print((left_side | (right_side << 32)))
-            
+                        
         return self._permute((left_side | (right_side << 32)),self._permutation_final, 64)
     
     def _cipherRound(self, left0_32bit, right0_32bit, round_key):
-        
-        print("Left 0 value: " + str(left0_32bit))
-        print("Right 0 value: " + str(right0_32bit))
-        print("Round key: " + str(round_key))
-        
-        print("")
         
         left1_32bit = right0_32bit
        
@@ -131,28 +129,22 @@ class DES:
     def _cipherFunction(self, data_32bit, round_key):
         #perform expansion permutation (32bit to 48bit)
         data_48bit = self._permute(data_32bit, self._expansion, 32)
-        print("Expansion " + str(data_48bit))
         #Xor value with the round key of iteration
         xor_value = data_48bit ^ round_key
-        print("Xor : " + str(xor_value))
         #perform substitution
         substitution = self._substitute(xor_value)
-        print("Substitutino: " + str(substitution))
         #Permutation
         return self._permute(substitution, self._permutation, 32)
     
     def _substitute(self, xor_value):        
         output_data = 0
-        
-        print("XOR VALUE : " + str(xor_value))
-        
+                
         #break 48bit xor value into 8 x 6 bit blocks        
         for i in range(0, 8):
             shift_amount = 42 - (i * 6)
             
             block = ((xor_value & (0b111111 << shift_amount)) >> shift_amount)
-            print("Block : " + str(block))
-
+           
             block_outer_bits = block & 0b100001
             
             if self._getNthBit(block_outer_bits, 5):
@@ -195,9 +187,21 @@ class DES:
             
         return value
     
+    def _intIntoByteArray(self, int_64bit):
+        byte_arr = list()
+        
+        for i in range (0,8):
+            
+            byte_arr.append( int_64bit &(0xFF << i * 8  ))
+            byte_arr[i] = byte_arr[i] >> (i * 8)
+            
+        byte_arr.reverse()
+        return bytes(byte_arr)
+    
     def _permute(self, value_n_bits, table, var_size):
         permutated_value = 0
         
+        #Relovate the bit in a new value according to the table instruction
         for i in range(0,len(table)):
             bit_index = var_size - table[i]
 
