@@ -5,10 +5,6 @@ Created on Fri Sep 21 17:05:32 2018
 @author: Miika
 """
 
-testkey = bytes(range(1,9))
-testdata = bytes([3,0,0,9,1,9,9,2])
-
-
 def test():
     
     des = DES()
@@ -16,27 +12,37 @@ def test():
     key_int = des._byteArrayToInt(testkey)
     data_int = des._byteArrayToInt(testdata)
     
-    data_int = des._permutation((data_int & 0xFFFFFFFFFFFFFFFF), des._initial_permutation)
-    
     des._createRoundkeys(key_int)
-    
+
+    print("Starting a test\n")
+    print("Data: " + str(data_int))
+    print("Key: " + str(key_int))
+    print("Round keys: ")
     print(des._round_keys)
+    print("")
+        
     
-    substitution = des._substitute(data_int, key_int)
-    
-    print(substitution)
-    
+    print(des._encryptBlock(data_int, des._round_keys))
+
+testkey = b'\x13\x34\x57\x79\x9B\xBC\xDF\xF1'
+testdata = b'\x01\x23\x45\x67\x89\xAB\xCD\xEF'
+
+
 
 class DES:
 
     def __init__(self):
-        self._pc_table1_left = 57,49,41,33,25,17,9,1,58,50,42,34,26,18,10,2,59,51,43,35,27,19,11,3,60,52,44,36
-        self._pc_table1_right = 63,55,47,39,31,23,15,7,62,54,46,38,30,22,14,6,61,53,45,37,29,21,13,5,28,20,12,4
-        self._pc_table2 = 14,17,11,24,1,5,3,28,15,6,21,10,23,19,12,4,26,8,16,7,27,20,13,2,41,52,31,37,47,55,30,40,51,45,33,48,44,49,39,56,34,53,46,42,50,36,29,32
-        self._expansion = 32,1,2,3,4,5,4,5,6,7,8,9,8,9,10,11,12,13,12,13,14,15,16,17,16,17,18,19,20,21,20,21,22,23,24,25,24,25,26,27,28,29,28,29,30,31,32,1
+        self._pc_table1_left = [57,49,41,33,25,17,9,1,58,50,42,34,26,18,10,2,59,51,43,35,27,19,11,3,60,52,44,36]
+        self._pc_table1_right = [63,55,47,39,31,23,15,7,62,54,46,38,30,22,14,6,61,53,45,37,29,21,13,5,28,20,12,4]
+        self._pc_table2 = [14,17,11,24,1,5,3,28,15,6,21,10,23,19,12,4,26,8,16,7,27,20,13,2,41,52,31,37,47,55,30,40,51,45,33,48,44,49,39,56,34,53,46,42,50,36,29,32]
+        self._expansion = [32,1,2,3,4,5,4,5,6,7,8,9,8,9,10,11,12,13,12,13,14,15,16,17,16,17,18,19,20,21,20,21,22,23,24,25,24,25,26,27,28,29,28,29,30,31,32,1]
         self._roundkey_shift = [1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1]
         
-        self._initial_permutation = 58,50,42,34,26,18,10,2,60,52,44,36,28,20,12,4,62,54,46,38,30,22,14,6,64,56,48,40,32,24,16,8,57,49,41,33,25,17,9,1,59,51,43,35,27,19,11,3,61,53,45,37,29,21,13,5,63,55,47,39,31,23,15,7
+        self._expansion = [32,1,2,3,4,5,4,5,6,7,8,9,8,9,10,11,12,13,12,13,14,15,16,17,16,17,18,19,20,21,20,21,22,23,24,25,24,25,26,27,28,29,28,29,30,31,32,1]
+        
+        self._initial_permutation = [58,50,42,34,26,18,10,2,60,52,44,36,28,20,12,4,62,54,46,38,30,22,14,6,64,56,48,40,32,24,16,8,57,49,41,33,25,17,9,1,59,51,43,35,27,19,11,3,61,53,45,37,29,21,13,5,63,55,47,39,31,23,15,7]
+        
+        self._permutation = [16,7,20,21,29,12,28,17,1,15,23,26,5,18,31,10,2,8,24,14,32,27,3,9,19,13,30,6,22,11,4,25]
         
         self._round_keys = list()
         
@@ -80,13 +86,55 @@ class DES:
                                         [7,11,4,1,9,12,14,2,0,6,10,13,15,3,5,8],
                                         [2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11]]]
 
-    def _substitute(self, data_48bit, key_48bit):
-        #Perform the XOR operatoin with the key and data
-        xor_value = data_48bit ^ key_48bit
-        print("XOR: " + str(xor_value))
-        print("data: " + str(data_48bit))
-        print("key: " + str(key_48bit))
+    
+    
+    
+    def _encryptBlock(self, data_64bit, round_keys):
+        data_64bit = self._permute(data_64bit, self._initial_permutation)
         
+        #Split the data
+        left_side = (data_64bit & 0xFFFFFFFF00000000) >> 32
+        right_side = (data_64bit & 0x00000000FFFFFFFF)
+        
+        for i in range(0,16):
+            cipher_round_output = self._cipherRound(left_side, right_side, round_keys[i])
+            
+            left_side = cipher_round_output[0]
+            right_side = cipher_round_output[1]
+            
+        return ((left_side << 32) | right_side)
+    
+    def _cipherRound(self, left0_32bit, right0_32bit, round_key):
+        print("Starting a new cipher round.\n")
+        
+        print("Left 0 value: " + str(left0_32bit))
+        print("Right 0 value: " + str(right0_32bit))
+        
+        print("")
+        
+        left1_32bit = right0_32bit
+       
+        right1_32bit = self._cipherFunction(right0_32bit, round_key) ^ left0_32bit
+        
+        print("Left 1 value: " + str(left1_32bit))
+        print("Right 1 value " + str(right1_32bit))
+        
+        print("")
+        
+        return left1_32bit, right1_32bit
+        
+    
+    def _cipherFunction(self, data_32bit, round_key):
+        #perform expansion permutation (32bit to 48bit)
+        data_48bit = self._permute(data_32bit, self._expansion)
+        #Xor value with the round key of iteration
+        xor_value = data_48bit ^ round_key
+        #perform substitution
+        substitution = self._substitute(xor_value)
+        #Permutation
+        return self._permute(substitution, self._permutation)
+    
+    def _substitute(self, xor_value):        
         output_data = 0
         
         #break 48bit xor value into 8 x 6 bit blocks        
@@ -100,12 +148,12 @@ class DES:
             
             block_inner_bits = (block & 0b011110) >> 1  #shifted left to get directly the correct index in substitution table (column)
             
-            print("Outer bits: " + str(block_outer_bits))
-            print("Inner bits: " + str(block_inner_bits))
+            #print("Outer bits: " + str(block_outer_bits))
+            #print("Inner bits: " + str(block_inner_bits))
             
             substituted_block = self._substitution_boxes[i][block_outer_bits][block_inner_bits]
             
-            print(substituted_block)
+            #print(substituted_block)
             
             #Put the substituted block back into the original place in the input
             output_data = output_data | ((substituted_block) << i * 6 )
@@ -113,13 +161,13 @@ class DES:
         return output_data
             
     
-    def _createRoundkeys(self, key_64bit ):
+    def _createRoundkeys(self, key_64bit ):        
         #FIRST PERMUTATION
         left_side =     key_64bit
         right_side =    (key_64bit & 0xFFFFFFFF) 
-        
-        left_side = self._permutation(left_side, self._pc_table1_left)
-        right_side = self._permutation(right_side, self._pc_table1_right)
+                
+        left_side = self._permute(left_side, self._pc_table1_left)
+        right_side = self._permute(right_side, self._pc_table1_right)
         
         for i in range(0,16):
             #Shift for both of the sides
@@ -131,7 +179,7 @@ class DES:
             
             #Perform the second permutation
             self._round_keys.append(
-                    self._permutation(combined_sides, self._pc_table2))
+                    self._permute(combined_sides, self._pc_table2))
 
         
     def _byteArrayToInt(self, byte_arr):
@@ -142,7 +190,7 @@ class DES:
             
         return value
     
-    def _permutation(self, value_n_bits, table):
+    def _permute(self, value_n_bits, table):
         permutated_value = 0
         
         for i in range(0,len(table)):
