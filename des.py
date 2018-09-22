@@ -8,29 +8,32 @@ Created on Fri Sep 21 17:05:32 2018
 def test():
     
     des = DES()
+#    
+#    key_int = des._byteArrayToInt(testkey)
+#    data_int = des._byteArrayToInt(testdata)
+#    
+#    des._createRoundkeys(key_int)
+#
+#    print("Starting a test\n")
+#    print("Data: " + str(data_int))
+#    print("Key: " + str(key_int))
+#    print("KEYHEX " + str(des._intIntoByteArray(key_int)))
+#    print("Round keys: ")
+#    print(des._round_keys)
+#    print("")
+#    
+#    cipher_text = des._encryptBlock(data_int, des._round_keys)
+#    
+#    print(cipher_text)
+#    
+#    des._round_keys.reverse()
+#    
+#    clear_text = des._decryptBlock(cipher_text, des._round_keys)
+#    
+#    print(clear_text)
     
-    key_int = des._byteArrayToInt(testkey)
-    data_int = des._byteArrayToInt(testdata)
+    print(des.encrypt([testdata], testkey))
     
-    des._createRoundkeys(key_int)
-
-    print("Starting a test\n")
-    print("Data: " + str(data_int))
-    print("Key: " + str(key_int))
-    print("KEYHEX " + str(des._intIntoByteArray(key_int)))
-    print("Round keys: ")
-    print(des._round_keys)
-    print("")
-    
-    cipher_text = des._encryptBlock(data_int, des._round_keys)
-    
-    print(cipher_text)
-    
-    des._round_keys.reverse()
-    
-    clear_text = des._decryptBlock(cipher_text, des._round_keys)
-    
-    print(clear_text)
 
 testkey = b'\x13\x34\x57\x79\x9B\xBC\xDF\xF1'
 testdata = b'\x01\x23\x45\x67\x89\xAB\xCD\xEF'
@@ -53,8 +56,6 @@ class DES:
         self._permutation_final = [40,8,48,16,56,24,64,32,39,7,47,15,55,23,63,31,38,6,46,14,54,22,62,30,37,5,45,13,53,21,61,29,36,4,44,12,52,20,60,28,35,3,43,11,51,19,59,27,34,2,42,10,50,18,58,26,33,1,41,9,49,17,57,25]
         
         self._permutation = [16,7,20,21,29,12,28,17,1,15,23,26,5,18,31,10,2,8,24,14,32,27,3,9,19,13,30,6,22,11,4,25]
-        
-        self._round_keys = list()
         
         self._substitution_boxes = [   [[14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7],
                                         [0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8],
@@ -97,7 +98,33 @@ class DES:
                                         [2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11]]]
 
     
-    
+    def encrypt(self, list_of_64bit_blocks, key_64bit):
+        #Error checking
+        if type(key_64bit) !=bytes:
+            return 1
+        if len(key_64bit) != 8:
+            return 1
+        if type(list_of_64bit_blocks) != list:
+            return 1
+        
+        key_int = self._byteArrayToInt(testkey)
+        data_int = self._byteArrayToInt(testdata)
+        
+        cipher_text_arr = list()
+
+        #Create round keys
+        round_keys = self._createRoundkeys(key_int);
+        
+        for i in range(0, len(list_of_64bit_blocks)):
+            cipher_text = self._encryptBlock(data_int, round_keys)
+            
+            cipher_bytes = self._intIntoByteArray(cipher_text)
+            
+            for y in range(0, len(cipher_bytes)):
+                cipher_text_arr.append(cipher_bytes[y])
+                            
+        return bytes(cipher_text_arr)
+
     
     def _decryptBlock(self, data_64bit, round_keys_reversed):
         return self._encryptBlock(data_64bit, round_keys_reversed)
@@ -166,6 +193,8 @@ class DES:
         left_side =     key_64bit >> 28
         right_side =    (key_64bit & 0xFFFFFFF)
         
+        round_keys = list()
+        
         for i in range(0,16):
             #Shift for both of the sides
             left_side = self._leftShift(left_side, 28, self._roundkey_shift[i])
@@ -175,9 +204,10 @@ class DES:
             combined_sides = ((left_side << 28) | right_side)
                         
             #Perform the second permutation
-            self._round_keys.append(
+            round_keys.append(
                     self._permute(combined_sides, self._pc_table2, 56))
 
+        return round_keys
         
     def _byteArrayToInt(self, byte_arr):
         value = 0
