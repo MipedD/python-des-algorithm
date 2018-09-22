@@ -7,36 +7,18 @@ Created on Fri Sep 21 17:05:32 2018
 
 def test():
     
+    testkey = b'\x13\x34\x57\x79\x9B\xBC\xDF\xF1'
+    testdata = b'\x01\x23\x45\x67\x89\xAB\xCD\xEF'
+    
     des = DES()
-#    
-#    key_int = des._byteArrayToInt(testkey)
-#    data_int = des._byteArrayToInt(testdata)
-#    
-#    des._createRoundkeys(key_int)
-#
-#    print("Starting a test\n")
-#    print("Data: " + str(data_int))
-#    print("Key: " + str(key_int))
-#    print("KEYHEX " + str(des._intIntoByteArray(key_int)))
-#    print("Round keys: ")
-#    print(des._round_keys)
-#    print("")
-#    
-#    cipher_text = des._encryptBlock(data_int, des._round_keys)
-#    
-#    print(cipher_text)
-#    
-#    des._round_keys.reverse()
-#    
-#    clear_text = des._decryptBlock(cipher_text, des._round_keys)
-#    
-#    print(clear_text)
     
-    print(des.encrypt([testdata], testkey))
+    cipher_text = des.encrypt([testdata], testkey)
     
-
-testkey = b'\x13\x34\x57\x79\x9B\xBC\xDF\xF1'
-testdata = b'\x01\x23\x45\x67\x89\xAB\xCD\xEF'
+    clear_text = des.decrypt([cipher_text], testkey)
+    
+    print(cipher_text)
+    print(clear_text)
+    
 
 
 
@@ -106,17 +88,14 @@ class DES:
             return 1
         if type(list_of_64bit_blocks) != list:
             return 1
-        
-        key_int = self._byteArrayToInt(testkey)
-        data_int = self._byteArrayToInt(testdata)
-        
+
         cipher_text_arr = list()
 
         #Create round keys
-        round_keys = self._createRoundkeys(key_int);
+        round_keys = self._createRoundkeys(self._byteArrayToInt(key_64bit));
         
         for i in range(0, len(list_of_64bit_blocks)):
-            cipher_text = self._encryptBlock(data_int, round_keys)
+            cipher_text = self._encryptBlock(self._byteArrayToInt(list_of_64bit_blocks[i]), round_keys)
             
             cipher_bytes = self._intIntoByteArray(cipher_text)
             
@@ -124,7 +103,32 @@ class DES:
                 cipher_text_arr.append(cipher_bytes[y])
                             
         return bytes(cipher_text_arr)
+    
+    def decrypt(self, list_of_64bit_ciphertxt_blocks, key_64bit):
+        #Error checking
+        if type(key_64bit) !=bytes:
+            return 1
+        if len(key_64bit) != 8:
+            return 1
+        if type(list_of_64bit_ciphertxt_blocks) != list:
+            return 1
+        
+        clear_text_arr = list()
 
+        #Create round keys
+        round_keys = self._createRoundkeys(self._byteArrayToInt(key_64bit));
+        round_keys.reverse()
+        
+        #Decrypt each block & add it into an array
+        for i in range(0, len(list_of_64bit_ciphertxt_blocks)):
+            clear_text = self._decryptBlock(self._byteArrayToInt(list_of_64bit_ciphertxt_blocks[i]), round_keys)
+            
+            clear_bytes = self._intIntoByteArray(clear_text)
+            
+            for y in range(0, len(clear_bytes)):
+                clear_text_arr.append(clear_bytes[y])
+                            
+        return bytes(clear_text_arr)
     
     def _decryptBlock(self, data_64bit, round_keys_reversed):
         return self._encryptBlock(data_64bit, round_keys_reversed)
